@@ -1,0 +1,30 @@
+[
+  {
+    "account_number": "1000 2200 3344",
+    "iban": "SE45 5000 0000 0583 9825 7466",
+    "account_type": "Current",
+    "balance": 2450.75,
+    "currency": "EUR",
+    "overdraft": 300.0,
+    "card": {"number": "4556123412341234", "pin": "1234", "expiry": "12/30", "status": "active"},
+    "customer": {"customer_id": "CUS-1001", "full_name": "Denis Ritchie", "email": "denis.ritchie@example.com", "phone": "+46 70 123 45 67", "street": "Viktor Rydbergsgatan 99", "city": "Gothenburg", "postal_code": "412 57", "country": "Sweden"},
+    "transactions": [
+      {"transaction_id": "TRX8FA210", "kind": "DEPOSIT", "amount": 600.0, "balance_after": 2450.75, "timestamp": "2026-10-15T10:20:00", "note": "Salary adjustment"},
+      {"transaction_id": "TRX119BD0", "kind": "WITHDRAWAL", "amount": 80.0, "balance_after": 1850.75, "timestamp": "2026-10-10T17:05:00", "note": "Cash withdrawal"}
+    ]
+  },
+  {
+    "account_number": "1000 2200 7788",
+    "iban": "SE18 5000 0000 0583 9825 1199",
+    "account_type": "Savings",
+    "balance": 8120.0,
+    "currency": "EUR",
+    "interest_rate": 0.012,
+    "card": {"number": "4556123412349876", "pin": "4321", "expiry": "08/29", "status": "active"},
+    "customer": {"customer_id": "CUS-1002", "full_name": "Samira Ek", "email": "samira.ek@example.com", "phone": "+46 70 987 65 43", "street": "Södra Vägen 7", "city": "Gothenburg", "postal_code": "412 54", "country": "Sweden"},
+    "transactions": [
+      {"transaction_id": "TRX227DC1", "kind": "DEPOSIT", "amount": 500.0, "balance_after": 8120.0, "timestamp": "2026-10-01T09:00:00", "note": "Monthly savings"}
+    ]
+  }
+]
+
