@@ -8,5 +8,3 @@ Two self-contained systems under test for practical software-quality and refacto
 | [Argentaria](./Argentaria/) | Desktop banking terminal | Python, Tkinter, JSON | [Argentaria README](./Argentaria/README.md) |
 
 Each project includes functional and non-functional requirements, student-oriented use cases, runnable source code, automated backend tests, seed data, and an editable Draw.io diagram whose identifiers match the implementation.
-
-The applications are deliberately compact enough to understand in a teaching session. Their behaviour should remain intact while students test, analyse, and improve the implementation.
