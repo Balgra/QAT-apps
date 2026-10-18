@@ -77,11 +77,3 @@ From `Refit/backend`, with its dependencies installed:
 python -m pytest
 ```
 
-Tests use a temporary copy of the catalog and do not change the seed file.
-
-For static analysis, run SonarScanner from this directory after configuring your SonarQube server. The included `sonar-project.properties` selects the backend and frontend source trees while excluding generated dependencies and build output.
-
-## Teaching use
-
-The application is intentionally suitable for dynamic testing, API testing, complexity measurement, static analysis, and behaviour-preserving refactoring. Students should treat the requirements as the behavioural contract and preserve it while improving the implementation.
-

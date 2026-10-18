@@ -43,10 +43,3 @@ python -m pytest
 ```
 
 Tests work on temporary account files and do not change the supplied accounts.
-
-For static analysis, run SonarScanner from this directory after configuring your SonarQube server. The included `sonar-project.properties` scans the domain, services, repository, and interface while excluding the local virtual environment.
-
-## Teaching use
-
-Argentaria is intended for black-box testing, state and boundary analysis, object-oriented code review, duplication analysis, static analysis, and behaviour-preserving refactoring. Treat the requirements as the behavioural contract.
-
