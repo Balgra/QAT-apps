@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -8,12 +8,14 @@ from fastapi import HTTPException
 from .models import CheckoutRequest, CheckoutResponse, Product
 from .pricing import PricingEngine
 from .repository import ProductRepository
+from .commerce import CommerceService
 
 
 class CheckoutService:
-    def __init__(self, repository: ProductRepository, pricing: PricingEngine):
+    def __init__(self, repository: ProductRepository, pricing: PricingEngine, commerce=None):
         self.repository = repository
         self.pricing = pricing
+        self.commerce = commerce or CommerceService(repository, pricing)
 
     def place_order(self, request: CheckoutRequest) -> CheckoutResponse:
         lines: list[tuple[Product, int]] = []
@@ -51,23 +53,9 @@ class CheckoutService:
 
         year = 2000 + int(request.expiry[3:])
         month = int(request.expiry[:2])
-        now = datetime.now(UTC)
+        now = self.commerce.clock()
         if year < now.year or (year == now.year and month < now.month):
             raise HTTPException(status_code=400, detail="The demonstration card has expired")
 
-        totals = self.pricing.calculate(
-            lines,
-            request.shipping_method,
-            request.coupon_code,
-            request.gift_wrap,
-            request.country.upper(),
-            request.customer_name,
-        )
-        self.repository.replace_many(replacements)
-        return CheckoutResponse(
-            order_id=f"RF-{uuid4().hex[:8].upper()}",
-            message="Thank you for giving great clothes another story.",
-            totals=totals,
-            item_count=sum(quantity for _, quantity in lines),
-        )
+        return CheckoutResponse(**self.commerce.purchase(request))
 

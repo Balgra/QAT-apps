@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import timezone
 
 from repository import AccountRepository
 
@@ -19,8 +20,9 @@ class CardSession:
 
 
 class CardAuthenticator:
-    def __init__(self, repository: AccountRepository):
+    def __init__(self, repository: AccountRepository, clock=None):
         self.repository = repository
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
 
     def authenticate(self, card_number: str, pin: str) -> CardSession:
         if not card_number:
@@ -37,6 +39,12 @@ class CardAuthenticator:
         if account.card.status == "blocked":
             raise ValueError("This card is blocked")
         if account.card.status == "expired":
+            raise ValueError("This card has expired")
+        if account.card.status != "active":
+            raise ValueError("This card is not active")
+        month, year = account.card.expiry.split("/")
+        now = self.clock()
+        if (2000 + int(year), int(month)) < (now.year, now.month):
             raise ValueError("This card has expired")
         if not account.card.matches_pin(pin):
             account.card.failed_attempts += 1

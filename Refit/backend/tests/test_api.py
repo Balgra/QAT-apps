@@ -17,6 +17,9 @@ def test_lists_twenty_seed_products(tmp_path):
     response = make_client(tmp_path).get("/api/products")
     assert response.status_code == 200
     assert len(response.json()) == 20
+    assert {row["seller"] for row in response.json()} == {"Mira", "Linnea", "Noah", "Elias", "Ava"}
+    assert all(sum(row["seller"] == seller for row in response.json()) == 4 for seller in {"Mira", "Linnea", "Noah", "Elias", "Ava"})
+    assert {row["stock"] for row in response.json()} == {1, 2, 3, 4}
 
 
 def test_product_crud(tmp_path):

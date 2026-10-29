@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, Minus, Plus, Search, ShoppingBag, Sparkles, X } from 'lucide-react'
+import Operations from './Operations'
+import { request, API_URL } from './api'
+import CheckoutField from './CheckoutField'
+import { validateDelivery, validatePayment } from './checkoutValidation'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const categories = ['all', 'tops', 'bottoms', 'outerwear', 'dresses', 'shoes', 'accessories']
 const categoryMarks = { tops: 'T', bottoms: 'B', outerwear: 'O', dresses: 'D', shoes: 'S', accessories: 'A' }
 const colorMap = {
@@ -67,46 +70,108 @@ function Checkout({ cart, products, onBack, onComplete }) {
   const [form, setForm] = useState({ customer_name: '', email: '', address: '', city: '', postal_code: '', country: 'SE', card_number: '4242 4242 4242 4242', expiry: '12/30', cvv: '123', shipping_method: 'standard', coupon_code: '', gift_wrap: false })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [quote, setQuote] = useState(null)
+  const [reservation, setReservation] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const formRef = useRef(null)
+  const summaryRef = useRef(null)
+  const hasFieldErrors = Object.values(fieldErrors).some(Boolean)
+  useEffect(() => {
+    if (error && !hasFieldErrors) summaryRef.current?.focus()
+  }, [error, hasFieldErrors])
   const subtotal = cart.reduce((sum, item) => sum + (products.find(p => p.id === item.productId)?.price || 0) * item.quantity, 0)
   const update = event => {
     const { name, value, type, checked } = event.target
-    setForm(current => ({ ...current, [name]: type === 'checkbox' ? checked : value }))
+    const next = { ...form, [name]: type === 'checkbox' ? checked : value }
+    setForm(next)
+    const updatedErrors = { ...validateDelivery(next), ...validatePayment(next) }
+    setFieldErrors(current => Object.fromEntries(Object.keys(current).filter(key => updatedErrors[key]).map(key => [key, updatedErrors[key]])))
+    setError('')
+    setQuote(null)
+  }
+  const validate = errors => {
+    setFieldErrors(errors)
+    const first = Object.keys(errors)[0]
+    if (first) {
+      setError('Please correct the highlighted fields before continuing.')
+      formRef.current?.elements.namedItem(first)?.focus()
+      return false
+    }
+    return true
+  }
+  const failed = reason => {
+    setError(reason.message)
+    setFieldErrors(reason.fieldErrors || {})
+    const first = Object.keys(reason.fieldErrors || {})[0]
+    if (first) formRef.current?.elements.namedItem(first)?.focus()
+  }
+  const blur = event => {
+    const name = event.target.name
+    const errors = { ...validateDelivery(form), ...validatePayment(form) }
+    setFieldErrors(current => ({ ...current, [name]: errors[name] }))
+  }
+  const field = (name, label, props = {}) => <CheckoutField name={name} label={label} form={form} errors={fieldErrors} onChange={update} onBlur={blur} {...props} />
+  const payload = () => ({ ...form, customer_name: form.customer_name.trim(), email: form.email.trim(), address: form.address.trim(), city: form.city.trim(), postal_code: form.postal_code.trim(), country: form.country.trim().toUpperCase(), coupon_code: form.coupon_code || null, reservation_id: reservation?.reservation_id || null, items: cart.map(item => ({ product_id: item.productId, quantity: item.quantity })) })
+  const review = async () => {
+    if (!validate(validateDelivery(form))) return
+    setBusy(true); setError('')
+    try { setQuote(await request('/quote', { method: 'POST', body: payload() })) }
+    catch (reason) { failed(reason) } finally { setBusy(false) }
+  }
+  const reserve = async () => {
+    const { email } = validateDelivery(form)
+    if (!validate(email ? { email } : {})) return
+    setBusy(true); setError('')
+    try { setReservation(await request('/reservations', { method: 'POST', body: { items: payload().items, email: form.email.trim() } })) }
+    catch (reason) { failed(reason) } finally { setBusy(false) }
+  }
+  const release = async () => {
+    setBusy(true); setError('')
+    try { await request(`/reservations/${reservation.reservation_id}`, { method: 'DELETE' }); setReservation(null); setQuote(null) }
+    catch (reason) { setError(reason.message) } finally { setBusy(false) }
   }
   const submit = async event => {
-    event.preventDefault(); setBusy(true); setError('')
+    event.preventDefault()
+    if (!validate({ ...validateDelivery(form), ...validatePayment(form) })) return
+    setBusy(true); setError('')
     try {
-      const response = await fetch(`${API_URL}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, country: form.country.toUpperCase(), coupon_code: form.coupon_code || null, card_number: form.card_number, items: cart.map(item => ({ product_id: item.productId, quantity: item.quantity })) }) })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.detail || 'Checkout could not be completed.')
+      const data = await request('/checkout', { method: 'POST', body: payload() })
+      localStorage.setItem('refit-order', data.order_id)
       onComplete(data)
-    } catch (reason) { setError(reason.message) } finally { setBusy(false) }
+    } catch (reason) { failed(reason) } finally { setBusy(false) }
   }
   return (
     <main className="checkout-page">
       <button className="text-button" onClick={onBack}>← Back to shop</button>
       <div className="checkout-grid">
-        <form className="checkout-form" onSubmit={submit}>
+        <form ref={formRef} className="checkout-form" onSubmit={submit} noValidate>
           <span className="eyebrow">Secure demonstration checkout</span><h1>Almost yours.</h1>
+          {error && <p ref={summaryRef} className="error-message" role="alert" tabIndex={-1}>{error}</p>}
           <section><h2>Delivery details</h2><div className="form-grid">
-            <label className="wide">Full name<input required name="customer_name" value={form.customer_name} onChange={update} autoComplete="name" /></label>
-            <label className="wide">Email<input required type="email" name="email" value={form.email} onChange={update} autoComplete="email" /></label>
-            <label className="wide">Address<input required name="address" value={form.address} onChange={update} autoComplete="street-address" /></label>
-            <label>City<input required name="city" value={form.city} onChange={update} autoComplete="address-level2" /></label>
-            <label>Postal code<input required name="postal_code" value={form.postal_code} onChange={update} autoComplete="postal-code" /></label>
-            <label>Country code<input required name="country" value={form.country} onChange={update} maxLength="2" autoComplete="country" /></label>
+            {field('customer_name', 'Full name', { required: true, wide: true, autoComplete: 'name' })}
+            {field('email', 'Email', { required: true, wide: true, type: 'email', autoComplete: 'email' })}
+            {field('address', 'Address', { required: true, wide: true, autoComplete: 'street-address' })}
+            {field('city', 'City', { required: true, autoComplete: 'address-level2' })}
+            {field('postal_code', 'Postal code', { required: true, autoComplete: 'postal-code' })}
+            {field('country', 'Country code', { required: true, maxLength: 2, autoComplete: 'country' })}
           </div></section>
           <section><h2>Delivery method</h2><div className="shipping-options">
             {[['standard', 'Standard', '3–5 weekdays'], ['express', 'Express', '1–2 weekdays'], ['pickup', 'Pickup', 'From our studio']].map(([value, title, note]) => <label className={form.shipping_method === value ? 'selected' : ''} key={value}><input type="radio" name="shipping_method" value={value} checked={form.shipping_method === value} onChange={update} /><strong>{title}</strong><span>{note}</span></label>)}
           </div></section>
           <section><h2>Payment</h2><div className="form-grid">
-            <label className="wide">Card number<input required name="card_number" value={form.card_number} onChange={update} inputMode="numeric" autoComplete="cc-number" /></label>
-            <label>Expiry<input required name="expiry" value={form.expiry} onChange={update} placeholder="MM/YY" autoComplete="cc-exp" /></label>
-            <label>CVV<input required name="cvv" value={form.cvv} onChange={update} inputMode="numeric" autoComplete="cc-csc" /></label>
-            <label className="wide">Coupon (optional)<input name="coupon_code" value={form.coupon_code} onChange={update} placeholder="Try WELCOME10" /></label>
+            {field('card_number', 'Card number', { required: true, wide: true, inputMode: 'numeric', autoComplete: 'cc-number' })}
+            {field('expiry', 'Expiry', { required: true, placeholder: 'MM/YY', autoComplete: 'cc-exp' })}
+            {field('cvv', 'CVV', { required: true, inputMode: 'numeric', autoComplete: 'cc-csc' })}
+            {field('coupon_code', 'Coupon (optional)', { wide: true, placeholder: 'Try WELCOME10' })}
             <label className="check wide"><input type="checkbox" name="gift_wrap" checked={form.gift_wrap} onChange={update} /> Wrap this order as a gift</label>
           </div></section>
-          {error && <p className="error-message" role="alert">{error}</p>}
-          <button className="primary-button full" disabled={busy}>{busy ? 'Placing your order…' : 'Buy now'} <ArrowRight /></button>
+          <div className="operation-actions">
+            <button type="button" disabled={busy} onClick={review}>Review final total</button>
+            {reservation ? <button type="button" disabled={busy} onClick={release}>Release hold</button> : <button type="button" disabled={busy || !form.email} onClick={reserve}>Hold these pieces for 10 minutes</button>}
+          </div>
+          {reservation && <p>Held until {new Date(reservation.expires_at).toLocaleTimeString()}. Keep the same email for this hold.</p>}
+          {quote && <section aria-live="polite"><h2>Total €{quote.totals.total.toFixed(2)}</h2><p>Discount €{quote.totals.discount.toFixed(2)} · delivery €{quote.totals.shipping.toFixed(2)} · tax €{quote.totals.tax.toFixed(2)} · gift wrap €{quote.totals.gift_wrap.toFixed(2)}</p><ul>{quote.messages.map(message => <li key={message}>{message}</li>)}</ul></section>}
+          <button type="submit" className="primary-button full" disabled={busy}>{busy ? 'Placing your order…' : 'Buy now'} <ArrowRight /></button>
         </form>
         <aside className="order-card"><span className="eyebrow">Order summary</span><h2>{cart.reduce((n, x) => n + x.quantity, 0)} pieces</h2>{cart.map(item => { const p = products.find(product => product.id === item.productId); return p ? <div className="summary-line" key={p.id}><span>{item.quantity} × {p.name}</span><strong>€{(p.price * item.quantity).toFixed(2)}</strong></div> : null })}<div className="summary-total"><span>Subtotal</span><strong>€{subtotal.toFixed(2)}</strong></div><p>Final shipping, discounts and tax are shown on your confirmation.</p></aside>
       </div>
@@ -127,6 +192,7 @@ export default function App() {
   const [drawer, setDrawer] = useState(false)
   const [page, setPage] = useState('shop')
   const [order, setOrder] = useState(null)
+  const refreshProducts = () => request('/products').then(setProducts).catch(() => setStatus('error'))
 
   useEffect(() => { fetch(`${API_URL}/products`).then(response => { if (!response.ok) throw new Error(); return response.json() }).then(data => { setProducts(data); setStatus('ready') }).catch(() => setStatus('error')) }, [])
   const visible = useMemo(() => products.filter(product => (category === 'all' || product.category === category) && (!query || `${product.name} ${product.description} ${product.seller}`.toLowerCase().includes(query.toLowerCase()))), [products, category, query])
@@ -135,10 +201,11 @@ export default function App() {
   const quantity = (productId, value) => setCart(current => value < 1 ? current.filter(item => item.productId !== productId) : current.map(item => item.productId === productId ? { ...item, quantity: value } : item))
   const complete = data => { setOrder(data); setCart([]); setPage('success'); window.scrollTo(0, 0) }
   if (page === 'checkout') return <Checkout cart={cart} products={products} onBack={() => setPage('shop')} onComplete={complete} />
+  if (page === 'operations') return <Operations products={products} onBack={() => setPage('shop')} onInventoryChange={refreshProducts} />
   if (page === 'success') return <Success order={order} onContinue={() => { setPage('shop'); setOrder(null); window.location.reload() }} />
   return (
     <div>
-      <header className="site-header"><a className="brand" href="#top">REFIT<span>.</span></a><nav><a href="#shop">New in</a><a href="#story">Our story</a></nav><button className="bag-button" onClick={() => setDrawer(true)}><ShoppingBag /> Bag <span>{count}</span></button></header>
+      <header className="site-header"><a className="brand" href="#top">REFIT<span>.</span></a><nav><a href="#shop">New in</a><a href="#story">Our story</a></nav><button className="studio-button" onClick={() => setPage('operations')}>Orders / seller studio</button><button className="bag-button" onClick={() => setDrawer(true)}><ShoppingBag /> Bag <span>{count}</span></button></header>
       <main id="top">
         <section className="hero"><div className="hero-copy"><span className="eyebrow">Pre-loved · reimagined</span><h1>Wear the story <em>forward.</em></h1><p>Considered pieces from real wardrobes, ready for their next chapter.</p><a className="primary-button" href="#shop">Explore the edit <ArrowRight /></a></div><div className="hero-art" aria-hidden="true"><div className="sun"></div><div className="coat-shape"><span>second</span><span>story</span></div><div className="orbit">20 ONE-OF-A-KIND FINDS · </div></div></section>
         <section className="value-strip"><p><Sparkles /> Curated condition</p><p>Independent sellers</p><p>Lower-impact wardrobes</p></section>

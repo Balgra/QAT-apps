@@ -12,6 +12,7 @@ RUN python -m pip install --upgrade pip \
 
 COPY app ./app
 COPY data ./data
+COPY tests ./tests
 
 EXPOSE 8000
 

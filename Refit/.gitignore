@@ -6,4 +6,9 @@ backend/.pytest_cache/
 **/__pycache__/
 *.pyc
 .env
+backend/data/*.backup.json
+.scannerwork/
+.coverage*
+coverage.xml
+test-results/
 

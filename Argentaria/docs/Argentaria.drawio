@@ -1,0 +1,280 @@
+<mxfile host="app.diagrams.net" pages="2">
+  <diagram id="application" name="Application interactions">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1700" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Argentaria — application classes&lt;/b&gt;&lt;br&gt;Association arrows indicate actual references/calls; hollow triangles indicate inheritance." vertex="1">
+          <mxGeometry height="65" width="1500" x="30" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;ArgentariaApp&lt;/b&gt;&lt;br&gt;ui.tk_app&lt;br&gt;show_transfer(), show_scheduled()&lt;br&gt;show_history(), show_card_settings()" vertex="1">
+          <mxGeometry height="140" width="260" x="30" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="gateway" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CardSessionGateway&lt;/b&gt;&lt;br&gt;insert(card_number, pin)" vertex="1">
+          <mxGeometry height="90" width="240" x="360" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CardAuthenticator&lt;/b&gt;&lt;br&gt;authenticate(card_number, pin)&lt;br&gt;repository, clock" vertex="1">
+          <mxGeometry height="110" width="250" x="670" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="session" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CardSession&lt;/b&gt;&lt;br&gt;account, active, started_at&lt;br&gt;get_account(), close()" vertex="1">
+          <mxGeometry height="110" width="220" x="1080" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="bank" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;BankingService&lt;/b&gt;&lt;br&gt;quote_fee(), deposit(), withdraw()&lt;br&gt;transfer(), history(), export_statement()&lt;br&gt;schedule_payment(), process_due_payments()&lt;br&gt;change_pin(), block_card()&lt;br&gt;repository, clock, processors" vertex="1">
+          <mxGeometry height="200" width="300" x="360" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="repo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;AccountRepository&lt;/b&gt;&lt;br&gt;get_all(), find_by_card()&lt;br&gt;find_by_account_number(), save()&lt;br&gt;transaction(), _commit()&lt;br&gt;data_file, lock" vertex="1">
+          <mxGeometry height="165" width="250" x="1360" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="json" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Session accounts.json&lt;/b&gt;&lt;br&gt;Temporary copy created by app.main&lt;br&gt;from data/accounts.json&lt;br&gt;Accounts, card/customer objects,&lt;br&gt;transactions, scheduled payments" vertex="1">
+          <mxGeometry height="145" width="240" x="1400" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="currency" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CurrencyService&lt;/b&gt;&lt;br&gt;convert(), label_for()" vertex="1">
+          <mxGeometry height="90" width="250" x="20" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="deposit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CashDepositProcessor&lt;/b&gt;&lt;br&gt;process(...) : Transaction" vertex="1">
+          <mxGeometry height="100" width="250" x="30" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="withdraw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CashWithdrawalProcessor&lt;/b&gt;&lt;br&gt;process(...) : Transaction" vertex="1">
+          <mxGeometry height="100" width="270" x="350" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="transfer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;TransferProcessor&lt;/b&gt;&lt;br&gt;process(...) : Transaction" vertex="1">
+          <mxGeometry height="100" width="250" x="700" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="fee" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;FeeProcessor&lt;/b&gt;&lt;br&gt;quote(), apply()" vertex="1">
+          <mxGeometry height="100" width="240" x="1240" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="statement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;AccountStatement subclasses&lt;/b&gt;&lt;br&gt;CurrentStatement / SavingsStatement&lt;br&gt;PremiumStatement&lt;br&gt;csv(), text()" vertex="1">
+          <mxGeometry height="125" width="250" x="960" y="687.5" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-0" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="gateway" value="sign in">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-1" edge="1" parent="1" source="ui" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="bank" value="operations">
+          <mxGeometry relative="1" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="160" y="300" />
+              <mxPoint x="510" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-2" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="auth" value="delegates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-3" edge="1" parent="1" source="auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;entryX=0;entryY=0;entryDx=0;entryDy=0;" target="repo" value="load card">
+          <mxGeometry relative="1" x="-0.1075" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="120" />
+              <mxPoint x="1360" y="120" />
+            </Array>
+            <mxPoint x="910" y="205" as="sourcePoint" />
+            <mxPoint x="1040" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-4" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;entryX=0;entryY=0;entryDx=0;entryDy=0;" target="session" value="creates">
+          <mxGeometry relative="1" x="-0.61" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+            <mxPoint x="920" y="150" as="sourcePoint" />
+            <mxPoint x="1055" y="140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="session" value="holds session">
+          <mxGeometry relative="1" x="-0.1363" as="geometry">
+            <mxPoint x="290" y="265" as="sourcePoint" />
+            <mxPoint x="1165" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-6" edge="1" parent="1" source="bank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="repo" value="transaction">
+          <mxGeometry relative="1" x="0.0297" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="440" />
+              <mxPoint x="1010" y="480" />
+            </Array>
+            <mxPoint x="590" y="432" as="sourcePoint" />
+            <mxPoint x="1320" y="495.75" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-7" edge="1" parent="1" source="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="json" value="atomic JSON I/O">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-8" edge="1" parent="1" source="bank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="currency" value="convert">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-10" edge="1" parent="1" source="bank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="withdraw" value="cash out">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-12" edge="1" parent="1" source="bank" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="fee" value="fee policy">
+          <mxGeometry relative="1" x="0.1482" as="geometry">
+            <Array as="points">
+              <mxPoint x="1260" y="500" />
+            </Array>
+            <mxPoint x="650" y="475" as="sourcePoint" />
+            <mxPoint x="1350" y="725" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-13" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" value="export">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="660" y="520" as="sourcePoint" />
+            <mxPoint x="1085" y="767.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-14" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;entryX=1;entryY=1;entryDx=0;entryDy=0;" target="session" value="validate / refresh">
+          <mxGeometry relative="1" x="-0.2635" as="geometry">
+            <mxPoint x="660" y="372.64" as="sourcePoint" />
+            <mxPoint x="1262.9" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Am64YFTb-N66pZnBxx55-1" edge="1" parent="1" source="bank" style="endArrow=classic;html=1;rounded=0;defaultLabelBackgroundColor=gap;" target="deposit" value="cash in&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="250" y="640" as="sourcePoint" />
+            <mxPoint x="300" y="590" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Am64YFTb-N66pZnBxx55-2" edge="1" parent="1" source="bank" style="endArrow=classic;html=1;rounded=0;defaultLabelBackgroundColor=gap;" target="transfer" value="transfer&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="710" y="570" as="sourcePoint" />
+            <mxPoint x="760" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="domain" name="Domain and subtype families">
+    <mxGraphModel dx="1673" dy="905" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1330" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Argentaria — domain and subtype relationships&lt;/b&gt;" vertex="1">
+          <mxGeometry height="65" width="1500" x="30" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="account" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Account&lt;/b&gt;&lt;br&gt;account_number, iban, account_type&lt;br&gt;_balance, card, _transactions&lt;br&gt;_scheduled_payments&lt;br&gt;get_balance(), can_withdraw()" vertex="1">
+          <mxGeometry height="170" width="270" x="40" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="current" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CurrentAccount&lt;/b&gt;&lt;br&gt;overdraft&lt;br&gt;can_withdraw(), overdraft_limit()" vertex="1">
+          <mxGeometry height="105" width="260" x="40" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="savings" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;SavingsAccount&lt;/b&gt;&lt;br&gt;interest_rate&lt;br&gt;calculate_monthly_interest()" vertex="1">
+          <mxGeometry height="105" width="270" x="390" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="premium" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;PremiumAccount&lt;/b&gt;&lt;br&gt;account_type = Premium&lt;br&gt;overdraft_limit()" vertex="1">
+          <mxGeometry height="105" width="260" x="40" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="card" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;BankCard&lt;/b&gt;&lt;br&gt;number, _pin, expiry, status&lt;br&gt;customer&lt;br&gt;matches_pin(), masked_number()" vertex="1">
+          <mxGeometry height="140" width="270" x="400" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="customer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Customer&lt;/b&gt;&lt;br&gt;customer_id, full_name, profile&lt;br&gt;get_profile()" vertex="1">
+          <mxGeometry height="115" width="250" x="740" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="profile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CustomerProfile&lt;/b&gt;&lt;br&gt;email, phone, address&lt;br&gt;get_address()" vertex="1">
+          <mxGeometry height="115" width="250" x="1060" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="address" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Address&lt;/b&gt;&lt;br&gt;street, city, postal_code, country&lt;br&gt;formatted()" vertex="1">
+          <mxGeometry height="115" width="250" x="1380" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="transaction" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;Transaction&lt;/b&gt;&lt;br&gt;transaction_id, kind, amount&lt;br&gt;balance_after, timestamp, note&lt;br&gt;as_dict()" vertex="1">
+          <mxGeometry height="150" width="270" x="750" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="policy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;AccountPolicy&lt;/b&gt;&lt;br&gt;fee(operation, amount)" vertex="1">
+          <mxGeometry height="90" width="260" x="40" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="currentPolicy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CurrentPolicy&lt;/b&gt;&lt;br&gt;fee(operation, amount)" vertex="1">
+          <mxGeometry height="90" width="240" x="50" y="1170" as="geometry" />
+        </mxCell>
+        <mxCell id="savingsPolicy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;SavingsPolicy&lt;/b&gt;&lt;br&gt;fee(operation, amount)" vertex="1">
+          <mxGeometry height="90" width="240" x="360" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="premiumPolicy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;PremiumPolicy&lt;/b&gt;&lt;br&gt;fee(operation, amount)" vertex="1">
+          <mxGeometry height="90" width="240" x="680" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="baseStatement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;AccountStatement&lt;/b&gt;&lt;br&gt;csv(), text()" vertex="1">
+          <mxGeometry height="90" width="260" x="1070" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="currentStatement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;CurrentStatement&lt;/b&gt;&lt;br&gt;csv(), render_current()" vertex="1">
+          <mxGeometry height="90" width="240" x="1070" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="savingsStatement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;SavingsStatement&lt;/b&gt;&lt;br&gt;csv(), render_savings()" vertex="1">
+          <mxGeometry height="90" width="240" x="1380" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="premiumStatement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#f7faf7;strokeColor=#315348;fontSize=13;" value="&lt;b&gt;PremiumStatement&lt;/b&gt;&lt;br&gt;csv()" vertex="1">
+          <mxGeometry height="90" width="240" x="1070" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-0" edge="1" parent="1" source="current" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="account" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-2" edge="1" parent="1" source="premium" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="current" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-3" edge="1" parent="1" source="account" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="card" value="1">
+          <mxGeometry relative="1" x="-0.269" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="200" />
+              <mxPoint x="340" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-4" edge="1" parent="1" source="card" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="customer" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-5" edge="1" parent="1" source="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="profile" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-6" edge="1" parent="1" source="profile" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="address" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-7" edge="1" parent="1" source="account" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;endFill=0;strokeColor=#48675b;" target="transaction" value="0..*">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="885" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-9" edge="1" parent="1" source="savingsPolicy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="policy" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="1185" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-10" edge="1" parent="1" source="premiumPolicy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="policy" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-11" edge="1" parent="1" source="currentStatement" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="baseStatement" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1190" y="810" />
+              <mxPoint x="1190" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-12" edge="1" parent="1" source="savingsStatement" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="baseStatement" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="945" />
+              <mxPoint x="1350" y="725" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-13" edge="1" parent="1" source="premiumStatement" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#48675b;" target="currentStatement" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8th3eYgNl6i7WUS5Ieia-1" edge="1" parent="1" source="savings" style="endArrow=classic;html=1;rounded=0;defaultLabelBackgroundColor=gap;" target="account" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="310" y="420" as="sourcePoint" />
+            <mxPoint x="360" y="370" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8th3eYgNl6i7WUS5Ieia-2" edge="1" parent="1" source="currentPolicy" style="endArrow=classic;html=1;rounded=0;defaultLabelBackgroundColor=gap;" target="policy" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="130" y="1120" as="sourcePoint" />
+            <mxPoint x="180" y="1070" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

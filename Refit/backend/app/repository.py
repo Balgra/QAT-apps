@@ -5,6 +5,7 @@ from pathlib import Path
 from threading import Lock
 
 from .models import Product, ProductCreate, ProductUpdate
+from .storage import StateStore
 
 
 class ProductEnvelope:
@@ -18,22 +19,20 @@ class ProductEnvelope:
 class ProductRepository:
     def __init__(self, data_file: Path):
         self.data_file = data_file
+        self.store = StateStore(data_file)
         self._lock = Lock()
         self.last_operation = None
         self.last_product_count = None
 
     def _read(self) -> list[Product]:
-        with self._lock:
-            with self.data_file.open("r", encoding="utf-8") as handle:
-                rows = json.load(handle)
+        rows = self.store.read()["products"]
         self.last_operation = "read"
         self.last_product_count = len(rows)
         return [Product.model_validate(row) for row in rows]
 
     def _write(self, products: list[Product]) -> None:
-        with self._lock:
-            with self.data_file.open("w", encoding="utf-8") as handle:
-                json.dump([p.model_dump() for p in products], handle, indent=2, ensure_ascii=False)
+        with self.store.transaction() as state:
+            state["products"] = [p.model_dump() for p in products]
         self.last_operation = "write"
         self.last_product_count = len(products)
 

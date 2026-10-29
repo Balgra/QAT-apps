@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
 
 from repository import AccountRepository
 from services import BankingService, CardSessionGateway, CurrencyService
@@ -101,7 +101,7 @@ class ArgentariaApp:
         sidebar = tk.Frame(self.root, bg=GREEN, width=220, padx=22, pady=28)
         sidebar.pack(side="left", fill="y"); sidebar.pack_propagate(False)
         tk.Label(sidebar, text="ARGENTARIA", bg=GREEN, fg="white", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(0, 45))
-        for label, command in [("⌂   Overview", self.show_dashboard), ("＋  Add money", self.show_deposit), ("−   Withdraw", self.show_withdraw), ("◎   Account details", self.show_details)]:
+        for label, command in [("⌂   Overview", self.show_dashboard), ("＋  Add money", self.show_deposit), ("−   Withdraw", self.show_withdraw), ("↔   Transfer / schedule", self.show_transfer), ("▤   History / export", self.show_history), ("◷   Scheduled payments", self.show_scheduled), ("◎   Account details", self.show_details), ("◇   Card settings", self.show_card_settings)]:
             ttk.Button(sidebar, text=label, style="Side.TButton", command=command).pack(fill="x", pady=2)
         tk.Frame(sidebar, bg="#3b7468", height=1).pack(fill="x", pady=24)
         card = self.session.get_account().card
@@ -162,10 +162,13 @@ class ArgentariaApp:
         def submit():
             try:
                 value = float(amount.get())
+                quote = self.banking.quote_fee(self.session, operation, value)
+                if not messagebox.askyesno("Confirm transaction", f"Amount: EUR {value:.2f}\nFee: EUR {quote['fee']:.2f}\nContinue?"):
+                    return
                 result = self.banking.deposit(self.session, value, note.get()) if is_deposit else self.banking.withdraw(self.session, value, note.get())
                 messagebox.showinfo("Transaction complete", f"Reference {result['transaction_id']}\nNew balance: €{result['balance']:,.2f}")
                 self.show_dashboard()
-            except ValueError as error:
+            except (ValueError, OSError) as error:
                 feedback.config(text=str(error))
         ttk.Button(form, text=("Confirm deposit  →" if is_deposit else "Confirm withdrawal  →"), style="Primary.TButton", command=submit).pack(anchor="w", pady=(8, 0))
         amount.bind("<Return>", lambda _event: submit())
@@ -175,6 +178,120 @@ class ArgentariaApp:
 
     def show_withdraw(self):
         self._show_money_form("withdraw")
+
+    def show_transfer(self):
+        self._dashboard_shell("Transfer money", "Transfer now or schedule a payment in euros.")
+        values = {}
+        for name, label, default in [("destination", "Destination account", "1000 2200 7788"), ("amount", "Amount EUR", "50"), ("note", "Description", ""), ("due", "Due date YYYY-MM-DD (blank = now)", "")]:
+            ttk.Label(self.content, text=label).pack(anchor="w", pady=(8, 3))
+            entry = ttk.Entry(self.content)
+            entry.insert(0, default)
+            entry.pack(fill="x")
+            values[name] = entry
+        def submit():
+            try:
+                amount = values["amount"].get()
+                quote = self.banking.quote_fee(self.session, "transfer", amount)
+                if not messagebox.askyesno("Confirm transfer", f"Amount: EUR {quote['amount']:.2f}\nFee: EUR {quote['fee']:.2f}\nScheduled payments use the policy at execution. Continue?"):
+                    return
+                destination = values["destination"].get()
+                note = values["note"].get()
+                due = values["due"].get()
+                if due:
+                    self.banking.schedule_payment(self.session, destination, amount, due, note)
+                    messagebox.showinfo("Payment scheduled", "Use Scheduled payments to process payments when due.")
+                else:
+                    result = self.banking.transfer(self.session, destination, amount, note)
+                    messagebox.showinfo("Transfer complete", f"Reference: {result['transaction_id']}\nBalance: EUR {result['balance']:.2f}")
+                self.show_dashboard()
+            except (ValueError, OSError) as error:
+                messagebox.showerror("Transfer", str(error))
+        ttk.Button(self.content, text="Review and confirm", command=submit, style="Primary.TButton").pack(anchor="w", pady=20)
+
+    def show_scheduled(self):
+        self._dashboard_shell("Scheduled payments", "Payments run only when you select Process due payments.")
+        table = ttk.Treeview(self.content, columns=("date", "destination", "amount", "status", "result"), show="headings", height=10)
+        for key in table["columns"]:
+            table.heading(key, text=key.title())
+            table.column(key, width=145)
+        for payment in self.banking.scheduled_payments(self.session):
+            table.insert("", "end", values=(payment["due_date"], payment["destination"], f"{payment['amount']:.2f}", payment["status"], payment.get("error", payment.get("transaction_id", ""))))
+        table.pack(fill="both", expand=True)
+        def process():
+            try:
+                results = self.banking.process_due_payments(self.session)
+                messagebox.showinfo("Payments processed", f"Processed {len(results)} due payments. Failed payments are retained and are not automatically retried.")
+                self.show_scheduled()
+            except (ValueError, OSError) as error:
+                messagebox.showerror("Scheduled payments", str(error))
+        ttk.Button(self.content, text="Process due payments", command=process, style="Primary.TButton").pack(anchor="w", pady=15)
+
+    def show_history(self):
+        self._dashboard_shell("History and statements", "Inclusive dates; leave dates blank to include all history.")
+        filters = tk.Frame(self.content, bg=PAPER)
+        filters.pack(fill="x")
+        fields = {}
+        for key, label in [("start", "From YYYY-MM-DD"), ("end", "To YYYY-MM-DD"), ("query", "Description / reference")]:
+            box = ttk.Frame(filters)
+            box.pack(side="left", fill="x", expand=True, padx=(0, 8))
+            ttk.Label(box, text=label).pack(anchor="w")
+            fields[key] = ttk.Entry(box)
+            fields[key].pack(fill="x")
+        kind = ttk.Combobox(self.content, values=["all", "DEPOSIT", "WITHDRAWAL", "TRANSFER_IN", "TRANSFER_OUT", "FEE"], state="readonly")
+        kind.set("all")
+        kind.pack(anchor="w", pady=8)
+        table = ttk.Treeview(self.content, columns=("date", "kind", "amount", "note"), show="headings", height=8)
+        for key in table["columns"]:
+            table.heading(key, text=key.title())
+            table.column(key, width=145)
+        table.pack(fill="both", expand=True)
+        def args():
+            return {**{k: v.get() for k, v in fields.items()}, "kind": kind.get()}
+        def refresh():
+            try:
+                rows = self.banking.history(self.session, **args())
+                table.delete(*table.get_children())
+                for row in rows:
+                    table.insert("", "end", values=(row["timestamp"][:10], row["kind"], f"{row['amount']:.2f}", row["note"]))
+            except ValueError as error:
+                messagebox.showerror("History", str(error))
+        def export(format, locale):
+            try:
+                content = self.banking.export_statement(self.session, format, locale, **args())
+                path = filedialog.asksaveasfilename(defaultextension=".csv" if format == "csv" else ".txt", filetypes=[("Statement", "*.csv" if format == "csv" else "*.txt")])
+                if path:
+                    Path(path).write_text(content, encoding="utf-8-sig" if format == "csv" else "utf-8", newline="")
+            except (ValueError, OSError) as error:
+                messagebox.showerror("Export", str(error))
+        actions = ttk.Frame(self.content)
+        actions.pack(fill="x", pady=12)
+        for label, command in [("Apply filters", refresh), ("CSV English", lambda: export("csv", "en")), ("CSV Swedish", lambda: export("csv", "sv")), ("Text", lambda: export("text", "en"))]:
+            ttk.Button(actions, text=label, command=command).pack(side="left", padx=(0, 8))
+        refresh()
+
+    def show_card_settings(self):
+        self._dashboard_shell("Card settings", "Changing the PIN or blocking the card ends this session.")
+        ttk.Label(self.content, text="Current PIN").pack(anchor="w")
+        old = ttk.Entry(self.content, show="•")
+        old.pack(anchor="w", pady=8)
+        ttk.Label(self.content, text="New four-digit PIN").pack(anchor="w")
+        new = ttk.Entry(self.content, show="•")
+        new.pack(anchor="w", pady=8)
+        def change():
+            try:
+                self.banking.change_pin(self.session, old.get(), new.get())
+                self.eject()
+            except (ValueError, OSError) as error:
+                messagebox.showerror("PIN", str(error))
+        def block():
+            if messagebox.askyesno("Block card", "Block this demonstration card? Restore a clean data copy to recover it."):
+                try:
+                    self.banking.block_card(self.session)
+                    self.eject()
+                except (ValueError, OSError) as error:
+                    messagebox.showerror("Card", str(error))
+        ttk.Button(self.content, text="Change PIN", command=change).pack(anchor="w", pady=12)
+        ttk.Button(self.content, text="Block card", command=block).pack(anchor="w", pady=12)
 
     def show_details(self):
         self._dashboard_shell("Account details", "Your identity, account references and converted balances.")

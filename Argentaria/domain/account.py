@@ -15,6 +15,7 @@ class Account:
         self._transactions = transactions or []
         self._pending_receipt = None
         self._last_audit_message = None
+        self._scheduled_payments = []
 
     def get_balance(self) -> float:
         return round(self._balance, 2)
@@ -59,5 +60,14 @@ class CurrentAccount(Account):
         raise RuntimeError("Current accounts do not accrue savings interest")
 
     def overdraft_limit(self) -> float:
+        return self.overdraft
+
+
+class PremiumAccount(CurrentAccount):
+    def __init__(self, account_number, iban, balance, currency, card, transactions=None, overdraft=1000):
+        super().__init__(account_number, iban, balance, currency, card, transactions, overdraft)
+        self.account_type = "Premium"
+
+    def overdraft_limit(self):
         return self.overdraft
 

@@ -49,7 +49,7 @@ def test_currency_rates(tmp_path):
 def test_account_details_include_identity_and_conversions(tmp_path):
     gateway, service = setup_bank(tmp_path)
     details = service.account_details(gateway.insert("4556123412341234", "1234"))
-    assert details["holder"] == "Alex Lindberg"
+    assert details["holder"] == "Denis Ritchie"
     assert details["balance_usd"] == round(details["balance_eur"] * 1.1, 2)
     assert details["balance_sek"] == round(details["balance_eur"] * 9.5, 2)
 

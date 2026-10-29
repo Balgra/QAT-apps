@@ -21,6 +21,17 @@ Argentaria is a local desktop banking terminal for demonstration accounts. It pr
 - **FR-13 — View account details:** The customer shall be able to view holder contact details, address, account number, IBAN, account type, masked card number, and account-specific feature.
 - **FR-14 — View recent activity:** The customer shall be able to see recent deposits and withdrawals.
 - **FR-15 — View current and converted details:** The account-details view shall show the balance in EUR, USD, and SEK at the fixed training rates.
+- **FR-16 — Transfer:** The customer shall be able to transfer up to EUR 5,000 to another known demonstration account; invalid destinations, self-transfers, and insufficient funds including fees shall be rejected.
+- **FR-17 — Fees:** Before confirmation, the system shall present the operation amount and account-specific fee under the documented Current/Savings/Premium policy; a completed fee shall be recorded separately.
+- **FR-18 — Daily limit:** Completed cash withdrawals shall not exceed EUR 1,000 per Europe/Stockholm calendar day across card sign-ins within the same application run, in addition to the single-operation limit.
+- **FR-19 — Search history:** The customer shall be able to filter full history by inclusive dates, transaction type, and description/reference, with stable chronological sorting.
+- **FR-20 — Statements:** The customer shall be able to export the selected history in text or CSV using English or Swedish import conventions, preserving dates, descriptions, signed EUR amounts, and historical balances.
+- **FR-21 — Schedule:** The customer shall be able to schedule a one-off transfer to another known account on today or a future date.
+- **FR-22 — Process payments:** The customer shall explicitly trigger processing of due payments; execution shall use the current fee policy and persist executed/failed outcomes without automatically retrying them.
+- **FR-23 — Premium account:** The system shall support Premium accounts with their configured overdraft, zero operation fees, and corresponding statement representation.
+- **FR-24 — PIN change:** An authenticated customer shall be able to replace a four-digit PIN after supplying the current PIN; the current and other old-credential sessions shall become unusable.
+- **FR-25 — Block card:** An authenticated customer shall be able to block the current card and end its session; subsequent sign-in attempts shall be rejected.
+- **FR-26 — Fresh startup:** Each application launch shall begin with the supplied accounts, balances, cards, PINs, and histories. Normal operations shall change only the current run's copy of the data.
 
 ## Non-functional requirements
 
@@ -29,13 +40,50 @@ Argentaria is a local desktop banking terminal for demonstration accounts. It pr
 - **NFR-03 — Confirmation:** A successful deposit or withdrawal shall show its transaction reference and resulting balance.
 - **NFR-04 — Privacy:** The interface shall mask the displayed card number outside the card-entry field.
 - **NFR-05 — Session isolation:** Banking functions shall reject calls made without an active authenticated session.
-- **NFR-06 — Persistence:** Successful transaction state shall remain available after ending a session and signing in again.
+- **NFR-06 — Persistence:** Successful transaction state shall remain available after ending a card session and signing in again within the same application run.
 - **NFR-07 — Portability:** The system shall run using Python's standard Tkinter distribution and shall require no network access.
 - **NFR-08 — Testability:** Repository construction shall accept an alternate account-file path for isolated automated tests.
 - **NFR-09 — Numerical consistency:** Stored balances and presented transaction amounts shall use two decimal places.
-- **NFR-10 — Recoverability:** Supplied seed data shall be restorable through version control after classroom use.
+- **NFR-10 — Reproducibility:** Normal use shall leave the supplied account data unchanged, so each new application run begins from the same starting state.
 - **NFR-11 — Maintainable contract:** Behaviour documented here shall remain stable during analysis and refactoring exercises.
 - **NFR-12 — Responsiveness:** A user action against the supplied local data should complete within one second on a typical development machine.
+- **NFR-13 — Transfer integrity:** In one application process, both account updates, linked history, and any fee shall commit atomically; a failed commit shall preserve storage and session balances.
+- **NFR-14 — Compatibility:** English/Swedish CSV imported with the documented Excel/LibreOffice conventions shall preserve 100% of fixture rows and numeric totals. This is the acceptance target assessed in the README scenario.
+- **NFR-15 — Amount validation:** Operations shall reject non-finite values, booleans, non-positive amounts, and excess decimal places without changing stored state.
+- **NFR-16 — Deterministic time:** Daily-limit and scheduled-payment tests shall support an injected clock and isolated account data.
+
+## Additional student implementation use cases
+
+### UC-06 — Transfer or schedule money
+
+**Actor:** Authenticated customer. **Precondition:** Active card and another known account.
+
+1. The customer enters destination, amount, and optional note.
+2. The system presents the fee and asks for confirmation.
+3. The customer confirms an immediate transfer or supplies a due date.
+4. For a scheduled payment, the customer later selects Process due payments.
+
+**Alternatives:** Invalid destination, limit, or funds cause a rejection or persisted failed schedule. **Postcondition:** Immediate/executed transfers update both accounts once; due/failed/executed states remain inspectable within the current application run.
+
+### UC-07 — Filter and exchange a statement
+
+**Actor:** Authenticated customer. **Precondition:** An account with transaction history.
+
+1. The customer selects dates, transaction type, or search text.
+2. The system shows matching transactions.
+3. The customer exports text, English CSV, or Swedish CSV and opens it with the documented spreadsheet settings.
+
+**Postcondition:** Exported records and totals can be compared with the selected account history and compatibility target.
+
+### UC-08 — Manage card access
+
+**Actor:** Authenticated customer. **Precondition:** Active card session.
+
+1. The customer supplies the current/new PIN or confirms card blocking.
+2. The system saves the change and ends the session.
+3. When the application is closed and launched again, the supplied demonstration credentials are available automatically.
+
+**Alternatives:** Incorrect current PIN or invalid new PIN is rejected. **Postcondition:** Old credentials/blocked cards cannot access banking operations during that application run; the next launch starts with the documented demonstration credentials.
 
 ## Student implementation use cases
 

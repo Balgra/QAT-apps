@@ -25,6 +25,17 @@
     "transactions": [
       {"transaction_id": "TRX227DC1", "kind": "DEPOSIT", "amount": 500.0, "balance_after": 8120.0, "timestamp": "2026-10-01T09:00:00", "note": "Monthly savings"}
     ]
+  },
+  {
+    "account_number": "1000 2200 9900",
+    "iban": "SE12 5000 0000 0583 9825 9900",
+    "account_type": "Premium",
+    "balance": 12000.0,
+    "currency": "EUR",
+    "overdraft": 1000.0,
+    "card": {"number": "4556123412345555", "pin": "5555", "expiry": "12/35", "status": "active"},
+    "customer": {"customer_id": "CUS-1003", "full_name": "Robin Berg", "email": "robin@example.com", "phone": "+46 70 555 55 55", "street": "Demo Street 3", "city": "Gothenburg", "postal_code": "412 57", "country": "Sweden"},
+    "transactions": [],
+    "scheduled_payments": []
   }
 ]
-
