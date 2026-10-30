@@ -34,6 +34,7 @@ Refit is a browser-based marketplace for buying pre-owned clothing from individu
 - **FR-26 — Seller summary:** A seller shall be able to view sales and estimated earnings immediately after purchase, with separate pending earnings for placed/dispatched orders and available payout estimates for delivered orders. The summary shall show commissions, exclude cancellations, and reduce earnings after refunds under the documented tier/category policy. It shall load automatically when the seller changes and refresh after order actions; retrieved order lines shall identify their sellers.
 - **FR-27 — Listing review:** An operator shall be able to review, approve, or reject listings; rejected listings shall be unavailable for purchase and decisions shall update seller reputation.
 - **FR-28 — Regional delivery:** The backend shall enforce the documented country, express-delivery, and studio-pickup restrictions with a clear rejection for unsupported choices.
+- **FR-29 — API activity export:** The backend shall automatically record API requests and responses for the current run and expose `GET /api/activity-log` to download a JSON snapshot containing method, path, query, request/response payloads, status, timestamp, and duration, including rejected requests. The storefront shall not require a logging control.
 
 ## Non-functional requirements
 
@@ -53,6 +54,7 @@ Refit is a browser-based marketplace for buying pre-owned clothing from individu
 - **NFR-14 — Compatibility:** Current and previous documented client contracts shall exchange cart, delivery, coupon, and total information correctly in 100% of valid compatibility acceptance cases. This is the target assessed by the README quality scenario.
 - **NFR-15 — Reproducibility:** Tests shall use isolated fixture data and controllable time for return windows and reservation expiry.
 - **NFR-16 — Fresh startup:** Each new backend process shall begin with the supplied catalog, quantities, and demo profiles, with no orders or reservations from a previous run. Normal use shall not change the supplied data file.
+- **NFR-17 — Trace safety:** Activity capture shall preserve normal API behavior, redact credentials/card details/validation input values, and keep each run's records separate. JSON bodies up to 1 MiB shall be captured when fully observed; larger, incomplete, or non-JSON bodies shall have explicit omission metadata. Downloading shall neither clear records nor recursively capture the exported file.
 
 ## Additional student implementation use cases
 

@@ -27,11 +27,12 @@ Argentaria is a local desktop banking terminal for demonstration accounts. It pr
 - **FR-19 — Search history:** The customer shall be able to filter full history by inclusive dates, transaction type, and description/reference, with stable chronological sorting.
 - **FR-20 — Statements:** The customer shall be able to export the selected history in text or CSV using English or Swedish import conventions, preserving dates, descriptions, signed EUR amounts, and historical balances.
 - **FR-21 — Schedule:** The customer shall be able to schedule a one-off transfer to another known account on today or a future date.
-- **FR-22 — Process payments:** The customer shall explicitly trigger processing of due payments; execution shall use the current fee policy and persist executed/failed outcomes without automatically retrying them.
+- **FR-22 — Process payments:** The customer shall be able to process selected pending payments immediately regardless of their due dates, or process all pending payments due today or earlier. Before execution, the system shall display current fees and total debit for confirmation. Successful payments shall update both balances, record linked transfers and any fee, and retain actual costs, processing time, and executed/failed outcomes. Executed/failed payments shall not be charged again.
 - **FR-23 — Premium account:** The system shall support Premium accounts with their configured overdraft, zero operation fees, and corresponding statement representation.
 - **FR-24 — PIN change:** An authenticated customer shall be able to replace a four-digit PIN after supplying the current PIN; the current and other old-credential sessions shall become unusable.
 - **FR-25 — Block card:** An authenticated customer shall be able to block the current card and end its session; subsequent sign-in attempts shall be rejected.
 - **FR-26 — Fresh startup:** Each application launch shall begin with the supplied accounts, balances, cards, PINs, and histories. Normal operations shall change only the current run's copy of the data.
+- **FR-27 — Activity export:** The application shall automatically record navigation and public authentication/banking operations, inputs, results, errors, timestamps, and durations. A Download activity log button below Eject card shall export a JSON snapshot, and export shall remain available on the card-entry screen after ejection or failed authentication.
 
 ## Non-functional requirements
 
@@ -51,6 +52,8 @@ Argentaria is a local desktop banking terminal for demonstration accounts. It pr
 - **NFR-14 — Compatibility:** English/Swedish CSV imported with the documented Excel/LibreOffice conventions shall preserve 100% of fixture rows and numeric totals. This is the acceptance target assessed in the README scenario.
 - **NFR-15 — Amount validation:** Operations shall reject non-finite values, booleans, non-positive amounts, and excess decimal places without changing stored state.
 - **NFR-16 — Deterministic time:** Daily-limit and scheduled-payment tests shall support an injected clock and isolated account data.
+- **NFR-17 — Trace safety:** Activity logging shall preserve operation results and exceptions, redact PINs/full card numbers, avoid serializing private session/domain state, and start afresh on each application launch. Export shall not change account state or clear the log; cancellation shall have no effect, and a failed save shall show an error.
+- **NFR-18 — Scheduled-payment safety:** Only pending payments belonging to the active account may be selected; empty, duplicate, unknown, or completed references shall be rejected before any transfer. Processing shall revalidate confirmed details/fees, funds including fees, account rules, and transfer limits. A failed payment shall make no balance/history changes, and a failed batch commit shall preserve the previous stored and session state.
 
 ## Additional student implementation use cases
 
@@ -61,7 +64,8 @@ Argentaria is a local desktop banking terminal for demonstration accounts. It pr
 1. The customer enters destination, amount, and optional note.
 2. The system presents the fee and asks for confirmation.
 3. The customer confirms an immediate transfer or supplies a due date.
-4. For a scheduled payment, the customer later selects Process due payments.
+4. For a scheduled payment, the customer selects pending rows to process immediately, including future-dated payments, or chooses Process all due payments for payments due today or earlier.
+5. The customer reviews destinations, amounts, current fees, and total debit and confirms execution.
 
 **Alternatives:** Invalid destination, limit, or funds cause a rejection or persisted failed schedule. **Postcondition:** Immediate/executed transfers update both accounts once; due/failed/executed states remain inspectable within the current application run.
 

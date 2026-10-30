@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timezone
 
 from repository import AccountRepository
+from .activity_log import ActivityLog, record_activity
 
 
 class CardSession:
@@ -53,9 +54,11 @@ class CardAuthenticator:
 
 
 class CardSessionGateway:
-    def __init__(self, authenticator: CardAuthenticator):
+    def __init__(self, authenticator: CardAuthenticator, activity_log: ActivityLog | None = None):
         self.authenticator = authenticator
+        self.activity_log = activity_log
 
+    @record_activity("card.insert")
     def insert(self, card_number: str, pin: str) -> CardSession:
         return self.authenticator.authenticate(card_number, pin)
 

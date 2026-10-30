@@ -30,12 +30,14 @@ Refit/
 
 ## Compatibility quality scenario
 
-- **Source:** Refit React storefront or a supported API client.
-- **Stimulus:** Submits cart and delivery information for a quote or checkout.
-- **Artefact:** FastAPI request handling, checkout service, and pricing layer.
-- **Environment:** Current v2 storefront and the documented previous v1 client exchange checkout payloads with the same backend.
-- **Response:** Correctly interprets product identifiers, quantities, delivery options, and coupons and returns a price breakdown each client can use.
-- **Response measure:** Target: 100% of valid cases in the versioned compatibility suite produce the expected order and totals, with zero failures due to supported payload differences.
+### Goal of the scenario: Ensure that checkout requests from different client versions can be consistently processed by the same backend service.
+
+- **Source:** Refit React storefront.
+- **Stimulus:** Submits cart and delivery information for a checkout.
+- **Artefact:** FastAPI request handling, checkout service and pricing layer.
+- **Environment:** The storefront communicates with the running FastAPI backend.
+- **Response:** The backend correctly interprets product identifiers, quantities, delivery options, coupons and returns a price breakdown each client can use.
+- **Response measure:** Target: 95% of checkout requests from supported clients receive a complete price breakdown within 500 ms.
 
 This is an acceptance target, not an achieved measurement. See `docs/contracts.md` for client fixtures and reproducible compatibility checks.
 
@@ -112,6 +114,34 @@ The Gold demo profile is `member@refit.example`. Seller, listing-review, and ful
 The supplied `backend/data/products.json` is unchanged by normal use. Changes are saved to a temporary JSON file for the current backend run, so everyone starts with the same products and empty order history on the next launch.
 
 See [requirements](REQUIREMENTS.md), [business/API contracts](docs/contracts.md), and [architecture](docs/Refit.drawio).
+
+## Download activity log
+
+To download the API calls made during the current backend run, open **http://localhost:8000/api/activity-log** in your browser. It downloads `refit-activity-log.json`. With Docker, **http://localhost:5173/api/activity-log** accesses the same endpoint through the frontend proxy. This feature is API-only; there is no storefront logging button.
+
+The file contains each completed API call's HTTP method, path, query parameters, incoming JSON payload, outgoing JSON payload, status code, UTC timestamp, and duration. This includes rejected/failed calls and automatic health checks. Logging is automatic: use the shop first, then download the file for your report or debugging.
+
+Card details, credential fields, and validation-error input values are redacted. Request/response headers are not collected. Non-JSON, incomplete, or larger-than-1-MiB bodies are represented by capture metadata rather than raw contents. Downloading the log does not record the log inside itself or clear existing entries. Frontend-only actions that send no API request cannot appear in this backend log.
+
+**Download before stopping or restarting the backend:** each new run starts a new log. The log covers the local backend run, not an individual browser account. See [activity log format](docs/activity-log.md) for field definitions and an example.
+
+**Windows PowerShell:**
+
+```powershell
+Invoke-WebRequest -Uri http://localhost:8000/api/activity-log -OutFile refit-activity-log.json
+```
+
+**Windows CMD:**
+
+```bat
+curl.exe --fail http://localhost:8000/api/activity-log --output refit-activity-log.json
+```
+
+**Linux/macOS:**
+
+```bash
+curl --fail http://localhost:8000/api/activity-log --output refit-activity-log.json
+```
 
 ## Tests
 

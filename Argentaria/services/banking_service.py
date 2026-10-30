@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, date, timezone
 from uuid import uuid4
 from zoneinfo import ZoneInfo
@@ -8,6 +9,7 @@ from repository import AccountRepository
 from .currency_service import CurrencyService
 from .transaction_processors import CashDepositProcessor, CashWithdrawalProcessor
 from .operations import TransferProcessor, FeeProcessor, amount_value
+from .activity_log import ActivityLog, record_activity
 
 
 class AuditRelay:
@@ -16,7 +18,8 @@ class AuditRelay:
 
 
 class BankingService:
-    def __init__(self, repository: AccountRepository, currency_service: CurrencyService, clock=None):
+    def __init__(self, repository: AccountRepository, currency_service: CurrencyService, clock=None,
+                 activity_log: ActivityLog | None = None):
         self.repository = repository
         self.currency_service = currency_service
         self.deposit_processor = CashDepositProcessor()
@@ -28,7 +31,9 @@ class BankingService:
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.fee_processor = FeeProcessor()
         self.transfer_processor = TransferProcessor()
+        self.activity_log = activity_log
 
+    @record_activity("banking.get_balance")
     def get_balance(self, session, display_currency: str = "EUR") -> dict:
         if session is None or not session.active:
             raise ValueError("Insert a card first")
@@ -38,12 +43,15 @@ class BankingService:
         self.audit_relay.write(account, "BALANCE_VIEW")
         return {"amount": converted, "currency": display_currency, "symbol": self.currency_service.label_for(display_currency), "base_amount": euro}
 
+    @record_activity("banking.deposit")
     def deposit(self, session, amount: float, note: str = "") -> dict:
         return self._cash(session, amount, note, "deposit")
 
+    @record_activity("banking.withdraw")
     def withdraw(self, session, amount: float, note: str = "") -> dict:
         return self._cash(session, amount, note, "withdraw")
 
+    @record_activity("banking.account_details")
     def account_details(self, session) -> dict:
         if session is None or not session.active:
             raise ValueError("Insert a card first")
@@ -74,6 +82,7 @@ class BankingService:
         self.audit_relay.write(account, "DETAILS_VIEW")
         return details
 
+    @record_activity("banking.prepare_statement")
     def prepare_statement(self, session, include_pending: bool, include_address: bool, include_card: bool, include_conversion: bool, sort_order: str, start_date: str, end_date: str, heading: str, footer: str) -> list[str]:
         details = self.account_details(session)
         lines = [heading, details["holder"], details["iban"]]
@@ -99,6 +108,7 @@ class BankingService:
             raise ValueError("Session invalidated; insert an active card again")
         return account
 
+    @record_activity("banking.quote_fee")
     def quote_fee(self, session, operation, amount):
         account = self._fresh(session)
         if operation not in {"deposit", "withdraw", "transfer"}:
@@ -152,6 +162,7 @@ class BankingService:
         return {"transaction_id": transaction.transaction_id, "amount": amount, "fee": fee,
                 "balance": account.get_balance(), "destination": destination.account_number}
 
+    @record_activity("banking.transfer")
     def transfer(self, session, destination, amount, note=""):
         with self.repository.transaction() as accounts:
             account = self._fresh(session, accounts)
@@ -159,6 +170,7 @@ class BankingService:
         session.account = account
         return result
 
+    @record_activity("banking.history")
     def history(self, session, start="", end="", kind="all", query="", order="descending"):
         account = self._fresh(session)
         start_date = date.fromisoformat(start) if start else date.min
@@ -179,6 +191,7 @@ class BankingService:
         rows.sort(key=lambda row: (row[0], row[1]), reverse=order == "descending")
         return [row[2] for row in rows]
 
+    @record_activity("banking.export_statement")
     def export_statement(self, session, format="csv", locale="en", start="", end="", kind="all", query=""):
         from .statement_formats import CurrentStatement, SavingsStatement, PremiumStatement
         account = self._fresh(session)
@@ -198,6 +211,7 @@ class BankingService:
             return renderer.text(details)
         raise ValueError("Choose CSV or text statement format")
 
+    @record_activity("banking.schedule_payment")
     def schedule_payment(self, session, destination, amount, due_date, note=""):
         amount = amount_value(amount)
         due = date.fromisoformat(due_date)
@@ -216,27 +230,89 @@ class BankingService:
         session.account = account
         return payment
 
+    @record_activity("banking.scheduled_payments")
     def scheduled_payments(self, session):
         return self._fresh(session)._scheduled_payments
 
-    def process_due_payments(self, session):
-        today = self.clock().astimezone(ZoneInfo("Europe/Stockholm")).date().isoformat()
+    def _scheduled_selection(self, account, payment_ids):
+        payments = account._scheduled_payments
+        if payment_ids is None:
+            today = self.clock().astimezone(ZoneInfo("Europe/Stockholm")).date().isoformat()
+            return [payment for payment in payments if payment["status"] == "due" and payment["due_date"] <= today]
+        if not isinstance(payment_ids, (list, tuple)) or not payment_ids:
+            raise ValueError("Select at least one pending payment")
+        if any(not isinstance(key, str) or not key for key in payment_ids):
+            raise ValueError("Payment references must be non-empty strings")
+        if len(payment_ids) != len(set(payment_ids)):
+            raise ValueError("Select each payment only once")
+        by_id = {payment["id"]: payment for payment in payments}
+        if any(key not in by_id for key in payment_ids):
+            raise ValueError("A selected payment was not found in this account")
+        selected = [by_id[key] for key in payment_ids]
+        if any(payment["status"] != "due" for payment in selected):
+            raise ValueError("Only pending payments can be processed; completed or failed payments cannot be repeated")
+        return selected
+
+    def _scheduled_quote(self, account, payment):
+        amount = amount_value(payment["amount"])
+        if amount > 5000:
+            raise ValueError("Single scheduled payments are limited to EUR 5,000")
+        fee = self.fee_processor.quote(account, "transfer", amount)
+        return {"id": payment["id"], "destination": payment["destination"], "due_date": payment["due_date"],
+                "note": payment["note"], "amount": amount, "fee": fee, "total_debited": round(amount + fee, 2)}
+
+    @record_activity("banking.preview_scheduled_payments")
+    def preview_scheduled_payments(self, session, payment_ids=None):
+        with self.repository.lock:
+            account = self._fresh(session)
+            selected = self._scheduled_selection(account, payment_ids)
+            quotes = [self._scheduled_quote(account, payment) for payment in selected]
+            return {"payments": quotes, "balance": account.get_balance(),
+                    "amount": round(sum(payment["amount"] for payment in quotes), 2),
+                    "fee": round(sum(payment["fee"] for payment in quotes), 2),
+                    "total_debited": round(sum(payment["total_debited"] for payment in quotes), 2)}
+
+    def _execute_scheduled_payment(self, accounts, source_number, payment_id):
+        candidates = deepcopy(accounts)
+        source = next(account for account in candidates if account.account_number == source_number)
+        payment = next(item for item in source._scheduled_payments if item["id"] == payment_id)
+        try:
+            result = self._move(candidates, source, payment["destination"], payment["amount"], payment["note"])
+        except ValueError as error:
+            original = next(account for account in accounts if account.account_number == source_number)
+            payment = next(item for item in original._scheduled_payments if item["id"] == payment_id)
+            payment.update(status="failed", error=str(error), fee=0, total_debited=0)
+        else:
+            payment.update(result, status="executed", total_debited=round(result["amount"] + result["fee"], 2))
+            accounts[:] = candidates
+        payment["processed_at"] = self.clock().isoformat()
+        return payment.copy()
+
+    def _process_scheduled_payments(self, session, payment_ids, expected_payments):
         with self.repository.transaction() as accounts:
             account = self._fresh(session, accounts)
-            results = []
-            for payment in account._scheduled_payments:
-                if payment["status"] == "due" and payment["due_date"] <= today:
-                    try:
-                        result = self._move(accounts, account, payment["destination"], payment["amount"], payment["note"])
-                        payment["status"] = "executed"
-                        payment["transaction_id"] = result["transaction_id"]
-                    except ValueError as error:
-                        payment["status"] = "failed"
-                        payment["error"] = str(error)
-                    results.append(payment.copy())
-        session.account = account
+            selected = self._scheduled_selection(account, payment_ids)
+            if expected_payments is not None:
+                current = [self._scheduled_quote(account, payment) for payment in selected]
+                if current != expected_payments:
+                    raise ValueError("Payment details or fees changed; review the payments again")
+            results = [self._execute_scheduled_payment(accounts, account.account_number, payment["id"])
+                       for payment in selected]
+            updated = next(item for item in accounts if item.account_number == account.account_number)
+        session.account = updated
         return results
 
+    @record_activity("banking.process_scheduled_payments")
+    def process_scheduled_payments(self, session, payment_ids, expected_payments=None):
+        if payment_ids is None:
+            raise ValueError("Select at least one pending payment")
+        return self._process_scheduled_payments(session, payment_ids, expected_payments)
+
+    @record_activity("banking.process_due_payments")
+    def process_due_payments(self, session, expected_payments=None):
+        return self._process_scheduled_payments(session, None, expected_payments)
+
+    @record_activity("banking.change_pin")
     def change_pin(self, session, old_pin, new_pin):
         if not new_pin.isascii() or not new_pin.isdigit() or len(new_pin) != 4:
             raise ValueError("New PIN must contain four digits")
@@ -247,6 +323,7 @@ class BankingService:
             account.card._pin = new_pin
         session.close()
 
+    @record_activity("banking.block_card")
     def block_card(self, session):
         with self.repository.transaction() as accounts:
             account = self._fresh(session, accounts)

@@ -9,6 +9,8 @@ from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .checkout import CheckoutService
+from .activity_log import ActivityLog
+from .activity_middleware import ActivityLogMiddleware, DOWNLOAD_PATH
 from .models import CheckoutRequest, CheckoutResponse, Product, ProductCreate, ProductUpdate
 from .pricing import PricingEngine
 from .repository import ProductRepository
@@ -42,12 +44,22 @@ def create_app(data_file: Path | None = None, clock=None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    activity_log = ActivityLog()
+    app.add_middleware(ActivityLogMiddleware, activity_log=activity_log)
+    app.state.activity_log = activity_log
     repository = ProductRepository(data_file)
     pricing = PricingEngine()
     commerce = CommerceService(repository, pricing, clock)
     checkout = CheckoutService(repository, pricing, commerce)
     app.state.repository = repository
     app.state.commerce = commerce
+
+    @app.get(DOWNLOAD_PATH, response_class=Response)
+    def download_activity_log() -> Response:
+        return Response(activity_log.to_json(), media_type="application/json", headers={
+            "Content-Disposition": 'attachment; filename="refit-activity-log.json"',
+            "Cache-Control": "no-store",
+        })
 
     @app.get("/api/health")
     def health() -> dict[str, str]:

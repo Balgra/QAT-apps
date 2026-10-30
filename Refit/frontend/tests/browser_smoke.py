@@ -1,6 +1,7 @@
 """Run against a freshly started Refit backend. Requires Playwright and Chrome."""
 import argparse
 import json
+from pathlib import Path
 import re
 
 from playwright.sync_api import expect, sync_playwright
@@ -127,6 +128,23 @@ def run(base_url):
         expect(page.get_by_label('Order reference')).to_have_value(latest_id)
         expect(page.get_by_label('Order reference').locator('option')).to_have_count(2)
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "Mobile horizontal overflow"
+        with page.expect_download() as downloading:
+            page.evaluate("""() => {
+                const link = document.createElement('a')
+                link.href = '/api/activity-log'
+                document.body.appendChild(link)
+                link.click()
+                link.remove()
+            }""")
+        download = downloading.value
+        assert download.suggested_filename == 'refit-activity-log.json'
+        document = json.loads(Path(download.path()).read_text(encoding='utf-8'))
+        purchases = [row for row in document['events'] if row['path'] == '/api/checkout']
+        assert len(purchases) == 2
+        assert all(row['request']['payload']['value']['card_number'] == '[REDACTED]' for row in purchases)
+        assert all(row['response']['status_code'] == 200 for row in purchases)
+        assert all(row['response']['payload']['value']['order_id'] for row in purchases)
+        assert all(row['path'] != '/api/activity-log' for row in document['events'])
         assert not errors, errors
         browser.close()
         print("Browser smoke passed: quote, reservation, checkout, fulfilment, return, seller, moderation, mobile viewport")

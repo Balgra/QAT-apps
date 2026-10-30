@@ -7,6 +7,8 @@ from tkinter import messagebox, ttk, filedialog
 from repository import AccountRepository
 from services import BankingService, CardSessionGateway, CurrencyService
 from services.authentication import CardAuthenticator
+from services.activity_log import ActivityLog
+from .scheduled_payments import ScheduledPaymentsView
 
 
 INK = "#17211d"
@@ -28,8 +30,9 @@ class ArgentariaApp:
         self.root.configure(bg=PAPER)
         selected_file = data_file or Path(__file__).resolve().parents[1] / "data" / "accounts.json"
         self.repository = AccountRepository(selected_file)
-        self.gateway = CardSessionGateway(CardAuthenticator(self.repository))
-        self.banking = BankingService(self.repository, CurrencyService())
+        self.activity_log = ActivityLog()
+        self.gateway = CardSessionGateway(CardAuthenticator(self.repository), activity_log=self.activity_log)
+        self.banking = BankingService(self.repository, CurrencyService(), activity_log=self.activity_log)
         self.session = None
         self.currency = tk.StringVar(value="EUR")
         self.content = None
@@ -61,6 +64,7 @@ class ArgentariaApp:
             child.destroy()
 
     def show_card_entry(self):
+        self.activity_log.record("navigation", {"view": "Card entry"})
         self.clear()
         shell = tk.Frame(self.root, bg=GREEN)
         shell.pack(fill="both", expand=True)
@@ -93,21 +97,24 @@ class ArgentariaApp:
             except ValueError as error:
                 error_label.config(text=str(error))
         ttk.Button(panel, text="Insert card and continue  →", style="Primary.TButton", command=sign_in).pack(fill="x", pady=(6, 0))
+        ttk.Button(panel, text="Download activity log", style="Secondary.TButton", command=self.download_activity_log).pack(fill="x", pady=(12, 0))
         pin_entry.bind("<Return>", lambda _event: sign_in())
         tk.Label(panel, text="Training data only · no real banking connection", bg=PAPER, fg="#8c958f", font=("Segoe UI", 8)).pack(anchor="center", pady=(25, 0))
 
     def _dashboard_shell(self, title: str, subtitle: str):
+        self.activity_log.record("navigation", {"view": title})
         self.clear()
-        sidebar = tk.Frame(self.root, bg=GREEN, width=220, padx=22, pady=28)
+        sidebar = tk.Frame(self.root, bg=GREEN, width=220, padx=22, pady=18)
         sidebar.pack(side="left", fill="y"); sidebar.pack_propagate(False)
-        tk.Label(sidebar, text="ARGENTARIA", bg=GREEN, fg="white", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(0, 45))
+        tk.Label(sidebar, text="ARGENTARIA", bg=GREEN, fg="white", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(0, 18))
         for label, command in [("⌂   Overview", self.show_dashboard), ("＋  Add money", self.show_deposit), ("−   Withdraw", self.show_withdraw), ("↔   Transfer / schedule", self.show_transfer), ("▤   History / export", self.show_history), ("◷   Scheduled payments", self.show_scheduled), ("◎   Account details", self.show_details), ("◇   Card settings", self.show_card_settings)]:
-            ttk.Button(sidebar, text=label, style="Side.TButton", command=command).pack(fill="x", pady=2)
-        tk.Frame(sidebar, bg="#3b7468", height=1).pack(fill="x", pady=24)
+            ttk.Button(sidebar, text=label, style="Side.TButton", command=command).pack(fill="x", pady=1)
+        tk.Frame(sidebar, bg="#3b7468", height=1).pack(fill="x", pady=10)
         card = self.session.get_account().card
         tk.Label(sidebar, text=card.customer.full_name, bg=GREEN, fg="white", font=("Segoe UI", 9, "bold")).pack(anchor="w")
         tk.Label(sidebar, text=card.masked_number(), bg=GREEN, fg="#bce3d2", font=("Consolas", 8)).pack(anchor="w", pady=(4, 12))
         ttk.Button(sidebar, text="Eject card", style="Side.TButton", command=self.eject).pack(fill="x")
+        ttk.Button(sidebar, text="Download activity log", style="Side.TButton", command=self.download_activity_log).pack(fill="x", pady=(4, 0))
 
         body = tk.Frame(self.root, bg=PAPER, padx=46, pady=34)
         body.pack(side="left", fill="both", expand=True)
@@ -164,11 +171,14 @@ class ArgentariaApp:
                 value = float(amount.get())
                 quote = self.banking.quote_fee(self.session, operation, value)
                 if not messagebox.askyesno("Confirm transaction", f"Amount: EUR {value:.2f}\nFee: EUR {quote['fee']:.2f}\nContinue?"):
+                    self.activity_log.record("confirmation.cancel", {"operation": operation})
                     return
                 result = self.banking.deposit(self.session, value, note.get()) if is_deposit else self.banking.withdraw(self.session, value, note.get())
                 messagebox.showinfo("Transaction complete", f"Reference {result['transaction_id']}\nNew balance: €{result['balance']:,.2f}")
                 self.show_dashboard()
             except (ValueError, OSError) as error:
+                self.activity_log.record("cash.input_rejected", {"operation": operation, "amount": amount.get()},
+                                         error={"type": type(error).__name__, "message": str(error)})
                 feedback.config(text=str(error))
         ttk.Button(form, text=("Confirm deposit  →" if is_deposit else "Confirm withdrawal  →"), style="Primary.TButton", command=submit).pack(anchor="w", pady=(8, 0))
         amount.bind("<Return>", lambda _event: submit())
@@ -193,13 +203,14 @@ class ArgentariaApp:
                 amount = values["amount"].get()
                 quote = self.banking.quote_fee(self.session, "transfer", amount)
                 if not messagebox.askyesno("Confirm transfer", f"Amount: EUR {quote['amount']:.2f}\nFee: EUR {quote['fee']:.2f}\nScheduled payments use the policy at execution. Continue?"):
+                    self.activity_log.record("confirmation.cancel", {"operation": "transfer"})
                     return
                 destination = values["destination"].get()
                 note = values["note"].get()
                 due = values["due"].get()
                 if due:
                     self.banking.schedule_payment(self.session, destination, amount, due, note)
-                    messagebox.showinfo("Payment scheduled", "Use Scheduled payments to process payments when due.")
+                    messagebox.showinfo("Payment scheduled", "Open Scheduled payments to pay selected payments now, or process all payments when due.")
                 else:
                     result = self.banking.transfer(self.session, destination, amount, note)
                     messagebox.showinfo("Transfer complete", f"Reference: {result['transaction_id']}\nBalance: EUR {result['balance']:.2f}")
@@ -209,22 +220,8 @@ class ArgentariaApp:
         ttk.Button(self.content, text="Review and confirm", command=submit, style="Primary.TButton").pack(anchor="w", pady=20)
 
     def show_scheduled(self):
-        self._dashboard_shell("Scheduled payments", "Payments run only when you select Process due payments.")
-        table = ttk.Treeview(self.content, columns=("date", "destination", "amount", "status", "result"), show="headings", height=10)
-        for key in table["columns"]:
-            table.heading(key, text=key.title())
-            table.column(key, width=145)
-        for payment in self.banking.scheduled_payments(self.session):
-            table.insert("", "end", values=(payment["due_date"], payment["destination"], f"{payment['amount']:.2f}", payment["status"], payment.get("error", payment.get("transaction_id", ""))))
-        table.pack(fill="both", expand=True)
-        def process():
-            try:
-                results = self.banking.process_due_payments(self.session)
-                messagebox.showinfo("Payments processed", f"Processed {len(results)} due payments. Failed payments are retained and are not automatically retried.")
-                self.show_scheduled()
-            except (ValueError, OSError) as error:
-                messagebox.showerror("Scheduled payments", str(error))
-        ttk.Button(self.content, text="Process due payments", command=process, style="Primary.TButton").pack(anchor="w", pady=15)
+        self._dashboard_shell("Scheduled payments", "Pay selected pending payments now, or process all payments that are due.")
+        ScheduledPaymentsView(self.content, self.banking, self.session, self.activity_log).pack(fill="both", expand=True)
 
     def show_history(self):
         self._dashboard_shell("History and statements", "Inclusive dates; leave dates blank to include all history.")
@@ -316,11 +313,26 @@ class ArgentariaApp:
         tk.Label(conversions, text=f"{details['balance_sek']:,.2f} kr", bg=GREEN, fg="#f0d7a6", font=("Georgia", 16, "bold")).pack(side="left")
 
     def eject(self):
+        self.activity_log.record("card.eject", {"had_session": self.session is not None})
         if self.session:
             self.session.close()
         self.session = None
         self.currency.set("EUR")
         self.show_card_entry()
+
+    def download_activity_log(self) -> None:
+        path = filedialog.asksaveasfilename(
+            parent=self.root, title="Download activity log", initialfile="argentaria-activity-log.json",
+            defaultextension=".json", filetypes=[("JSON activity log", "*.json")],
+        )
+        if not path:
+            return
+        try:
+            self.activity_log.export(Path(path))
+        except OSError as error:
+            messagebox.showerror("Activity log", f"The log could not be saved: {error}", parent=self.root)
+            return
+        messagebox.showinfo("Activity log", "Activity log saved.", parent=self.root)
 
     def run(self):
         self.root.mainloop()
