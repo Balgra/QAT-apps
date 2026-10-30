@@ -11,4 +11,4 @@ Two systems under test for software-quality and refactoring exercises.
 
 Download or clone this repository, then follow [Setup.md](Setup.md). Both applications start with the supplied demonstration data on every launch. Purchases, balances, PIN changes, and other actions last for the current application run; no preparation command is needed before the next run.
 
-Each project includes requirements, use cases, backend source, tests, and an editable Draw.io diagram. Run tests directly with pytest from the project's directory, as shown in its README.
+Each project includes requirements, use cases, backend source, tests and an editable Draw.io diagram. Run tests directly with pytest from the project's directory, as shown in its README.
