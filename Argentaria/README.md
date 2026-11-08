@@ -115,23 +115,31 @@ python -B -m pytest tests -p no:cacheprovider
 python3 -B -m pytest tests -p no:cacheprovider
 ```
 
-Install dependencies using the startup instructions or Ubuntu/Debian system packages first. Tests use temporary account files. For a machine without Tkinter/display, add `--ignore=tests/test_ui.py` to run only backend tests.
+Install dependencies using the startup instructions or Ubuntu/Debian system packages first. Tests use temporary account files. For a machine without Tkinter/display, add `--ignore=tests/test_ui.py --ignore=tests/test_scheduled_ui.py` to run only backend tests.
 
 Two expected failures describe Swedish CSV compatibility gaps; `--runxfail` exposes them as normal failures. No comparison script or baseline file is required.
 
-## SonarQube (optional)
+## SonarQube
 
-With `pysonar` installed, your server running, and `SONAR_TOKEN` set locally, scan from **Argentaria**:
+Follow [Setup.md → SonarQube](../Setup.md#sonarqube) to install the local server with Docker on Windows, Linux, or macOS, install `pysonar`, and set `SONAR_TOKEN` in your terminal. One server can analyse both applications. Argentaria does not need to be running for analysis.
+
+When creating the local SonarQube project, use **project key `Arg`** and **display name `QAT Argentaria`**. These match `sonar.projectKey` and `sonar.projectName` in `sonar-project.properties`; keep both unchanged. The key is `Arg`, not `Argentaria`. Use a token authorised for this project.
+
+From **Argentaria**, the directory containing that properties file, run:
 
 ```text
-pysonar --sonar-host-url=http://localhost:9000 --sonar-project-key=Arg
+pysonar --sonar-host-url=http://localhost:9000
 ```
 
-The scan covers startup code in `app.py` plus `domain`, `services`, and `repository`. For optional coverage, run from **Argentaria**:
+The scanner reads the key, name, and analysis paths automatically. Production-source analysis covers startup code in `app.py` plus `domain`, `services`, and `repository`, with `tests` classified separately. The Tkinter UI is outside this analysis. Open **http://localhost:9000**, select **QAT Argentaria**, and inspect **Code** or **Measures → Overall Code**. For the assignment, compare files in `services`.
+
+Static analysis works without running tests. For optional backend coverage, run from **Argentaria**:
 
 ```text
 python -m pip install --user -r requirements-test.txt
-python -B -m pytest tests -p no:cacheprovider --ignore=tests/test_ui.py --cov=app --cov=domain --cov=services --cov=repository --cov-branch --cov-report=xml:coverage.xml
+python -B -m pytest tests -p no:cacheprovider --ignore=tests/test_ui.py --ignore=tests/test_scheduled_ui.py --cov=app --cov=domain --cov=services --cov=repository --cov-branch --cov-report=xml:coverage.xml
 ```
 
-Use `python3` on Linux/macOS. Then run the scan command from **Argentaria**. The properties file automatically imports `coverage.xml`; no extra coverage flag is needed. Without a report, static analysis still runs but coverage cannot be imported. The active SonarQube Quality Profile controls which rules are checked; keep it and the project key unchanged when comparing scans.
+The commands above work in Windows CMD/PowerShell. Use `python3` on Linux/macOS. The test requirements include `pytest-cov`, which supplies the `--cov` options. If using Ubuntu/Debian system packages instead of pip, install coverage support with `sudo apt install python3-pytest-cov python3-coverage` after the startup packages. Other OS-managed Python installations can use an optional environment as described in [Setup.md](../Setup.md).
+
+Then run the scan command from **Argentaria**. The properties file automatically imports `Argentaria/coverage.xml`; no extra coverage flag is needed. SonarQube does not run the tests itself, so regenerate the report after code changes if you want current coverage. Without a report, static analysis still runs but coverage cannot be imported. Keep the server version, project key, and active Python Quality Profile unchanged when comparing scans.

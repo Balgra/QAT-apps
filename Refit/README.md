@@ -45,7 +45,7 @@ This is an acceptance target, not an achieved measurement. See `docs/contracts.m
 
 ### Docker (recommended)
 
-Works in Windows CMD, PowerShell, Linux Bash, and macOS Zsh. Install and start Docker with Compose, then run from **QAT-apps**.
+Works in Windows CMD, PowerShell, Linux Bash, and macOS Zsh. [Install Docker](https://docs.docker.com/get-started/get-docker/) with Compose and start it, then run from **QAT-apps**.
 
 Docker builds separate backend and frontend images with their dependencies included.
 Compose connects the containers, and Nginx forwards the storefront's API calls to FastAPI.
@@ -60,7 +60,7 @@ Open **http://localhost:5173**; API documentation is at **http://localhost:8000/
 
 ### Without Docker
 
-Install Python **3.10+** and Node.js 22/npm. Open two terminals in **QAT-apps**.
+Install Python **3.10+** and Node.js **22.12 or newer in the Node 22 release line**, with npm. Open two terminals in **QAT-apps**.
 
 **Backend — Windows CMD or PowerShell:**
 
@@ -96,7 +96,7 @@ npm ci
 npm run dev
 ```
 
-Keep both terminals open. Stop each native server with **Ctrl+C**. A backend restart, including a development reload after editing Python code, begins a fresh run. Refreshing the browser does not restart the backend.
+Keep both terminals open. Open the frontend URL printed by Vite (normally **http://localhost:5173**); API documentation is at **http://localhost:8000/docs**. Stop each native server with **Ctrl+C**. A backend restart, including a development reload after editing Python code, begins a fresh run. Refreshing the browser does not restart the backend.
 
 ## Using the shop
 
@@ -162,20 +162,28 @@ Tests use temporary files. Two expected failures describe the previous-client co
 
 For frontend tests, run `npm.cmd test` on Windows or `npm test` on Linux/macOS from `Refit/frontend`, after installing npm dependencies.
 
-## SonarQube (optional)
+## SonarQube
 
-With `pysonar` installed, your server running, and `SONAR_TOKEN` set locally, scan from **Refit**:
+Follow [Setup.md → SonarQube](../Setup.md#sonarqube) to install the local server with Docker on Windows, Linux, or macOS, install `pysonar`, and set `SONAR_TOKEN` in your terminal. One server can analyse both applications. Refit does not need to be running for analysis.
+
+When creating the local SonarQube project, use **project key `Refit`** and **display name `QAT Refit`**. These match `sonar.projectKey` and `sonar.projectName` in `sonar-project.properties`; keep both unchanged. Use a token authorised for this project.
+
+From **Refit**, the directory containing that properties file, run:
 
 ```text
-pysonar --sonar-host-url=http://localhost:9000 --sonar-project-key=Refit
+pysonar --sonar-host-url=http://localhost:9000
 ```
 
-Only `backend/app` is analysed. For coverage, first run from **Refit/backend**:
+The scanner reads the key, name, and analysis paths automatically. Production-source analysis covers `backend/app`, with `backend/tests` classified as tests. The React frontend is outside this analysis. Open **http://localhost:9000**, select **QAT Refit**, and inspect **Code** or **Measures → Overall Code**. For the assignment, compare files in `backend/app`.
+
+Static analysis works without running tests. To include coverage, first run from **Refit/backend** with locally installed Python/dependencies, even if the application itself runs in Docker:
 
 ```text
 python -m pip install --user -r requirements-test.txt
 python -B -m pytest tests -p no:cacheprovider --cov=app --cov-branch --cov-report=xml:../coverage.xml
 ```
 
-Use `python3` on Linux/macOS. Then run the scan command from **Refit**. The properties file automatically imports `coverage.xml`; no extra coverage flag is needed. SonarQube does not run the tests itself, so generate a fresh report after code changes if you want current coverage. Without a report, static analysis still runs but coverage cannot be imported. The active SonarQube Quality Profile controls which rules are checked.
+The commands above work in Windows CMD/PowerShell. Use `python3` on Linux/macOS; if the OS blocks pip, see [Setup.md](../Setup.md) for the optional-environment alternative. The test requirements include `pytest-cov`, which supplies the `--cov` options.
+
+Return to **Refit** with `cd ..`, then run the scan command. The properties file automatically imports `Refit/coverage.xml`; no extra coverage flag is needed. SonarQube does not run the tests itself, so generate a fresh report after code changes if you want current coverage. Without a report, static analysis still runs but coverage cannot be imported. Keep the server version, project key, and active Python Quality Profile unchanged when comparing scans.
 
